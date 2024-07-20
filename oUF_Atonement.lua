@@ -1,124 +1,145 @@
 --[[
-# Element: Atonement
+	# Element: Atonement
 
-Adds support for an element that updates and displays the player's atonement buff with a status bar widget.
+	Handles the update of a status bar that displays player's Atonement buff duration.
 
-## Widgets
+	## Widgets
 
-`Atonement`	: A `StatusBar` to represent player's 'Atonement' buff duration.
+	Atonement 	- A `StatusBar` used to represent player's 'Atonement' buff duration.
 
-## Example implementation
+	## Sub-Widgets
 
-```lua
--- create atonement oUF
-local Atonement = CreateFrame("StatusBar", self:GetName().."Atonement", self.Health)
-Atonement:SetPoint("BOTTOMLEFT", self.Health, "BOTTOMLEFT")
-Atonement:SetPoint("BOTTOMRIGHT", self.Health, "BOTTOMRIGHT")
-Atonement:SetHeight(6)
-Atonement:SetStatusBarTexture(HealthTexture)
-Atonement:SetFrameLevel(self.Health:GetFrameLevel() + 1)
+	.bg 		- A `Texture` used as a background. It will inherit the color of the main StatusBar.
 
--- add a background
-Atonement.Background = Atonement:CreateTexture(nil, "BORDER")
-Atonement.Background:SetTexture(HealthTexture)
-Atonement.Background:SetAllPoints()
-Atonement.Background:SetColorTexture(207/255 * .2, 181/255 * .2, 59/255 * .2)
+	## Options
 
--- register it with oUF
-self.Atonement = Atonement
-```
+	.color		- use to color the status bar. Default is #cfb53b (207, 181, 59)
+
+	## Examples
+
+		-- Position and size
+		local Atonement = CreateFrame("StatusBar", nil, self)
+		Atonement:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT")
+		Atonement:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT")
+		Atonement:SetHeight(5)
+		Atonement:SetStatusBarTexture(Texture)
+
+		-- Add a background
+		local Background = Atonement:CreateTexture(nil, "BORDER")
+		Background:SetAllPoints()
+		Background:SetTexture(Texture)
+
+		-- Register it with oUF
+		Atonement.bg = Background
+		self.Atonement = Atonement
 --]]
 local _, ns = ...
 local oUF = ns.oUF or oUF
 assert(oUF, "oUF_Atonement was unable to locate oUF install.")
 
+-- Blizzard
+local GetSpecialization = _G.GetSpecialization
+local UnitClass = _G.UnitClass
 local UnitBuff = _G.UnitBuff
 
+-- Constants
+local SPEC_PRIEST_DISCIPLINE = 1
+local MAX_AURAS = 40
+local ATONEMENT_COLOR = oUF:CreateColor(0.81, 0.71, 0.23)
+
+local auras = {
+	[194384] = true,	-- Atonement
+	[214206] = true		-- Atonement PvP Talent
+}
+
 local function OnUpdate(self, elapsed)
-	local CurrentTime = GetTime()
-	local Timer = self.ExpirationTime - CurrentTime
-
-	self:SetValue(Timer)
-end
-
-local function Update(self, event, ...)
-	local Unit = self.unit
-
-	if Unit and Unit ~= self.unit then
-		return
-	end
-
-	local AtonementID = 194384
-	local AtonementIDPvP = 214206
-
-	for i = 1, 40 do
-		local Buff, Icon, Count, DebuffType, Duration, ExpirationTime, UnitCaster, IsStealable, ShouldConsolidate, SpellID = UnitBuff(Unit, i)
-
-		if not Buff then
-			break
-		end
-
-		if (SpellID == AtonementID) or (SpellID == AtonementIDPvP) then
-			self.Atonement.Duration = Duration
-			self.Atonement.ExpirationTime = ExpirationTime
-			self.Atonement:SetMinMaxValues(0, Duration)
-			self.Atonement:SetScript("OnUpdate", OnUpdate)
-			self.Atonement:Show()
-
-			return
+	self.elapsed = (self.elapsed or 0) + elapsed
+	if (self.elapsed >= 0.1) then
+		local value = (self.expirationTime or 0) - GetTime()
+		if (value > 0) then
+			self:SetValue(value)
+		else
+			self:SetScript("OnUpdate", nil)
+			self:SetValue(0)
 		end
 	end
-
-	self.Atonement:SetScript("OnUpdate", nil)
-	self.Atonement:SetValue(0)
-	self.Atonement:Hide()
 end
 
-local function CheckSpec(self, event)
-	local DiscSpec = 1
+local function Update(self, event, unit)
+	if self.unit ~= unit then return end
+	local element = self.Atonement
 
-	if (GetSpecialization() ~= DiscSpec) then
+	if element then
+		for index = 1, MAX_AURAS do
+			local name, icon, count, dispelType, duration, expirationTime, source, isStealable, _, spellID = UnitBuff(unit, index)
+			if name then
+				if auras[spellID] then
+					element.duration = duration or 0
+					element.expirationTime = expirationTime or (GetTime() + element.duration)
+					
+					element:SetMinMaxValues(0, duration)
+					element:SetScript("OnUpdate", OnUpdate)
+					element:Show()
+
+					return
+				end
+			end
+		end
+
+		element:SetScript("OnUpdate", nil)
+		element:SetValue(0)
+		element:Hide()
+	end
+end
+
+local function Visibility(self, event)
+	local _, class = UnitClass("player")
+	local specialization = GetSpecialization()
+
+	if (class == "PRIEST") and (specialization == SPEC_PRIEST_DISCIPLINE) then
+		self:RegisterEvent("UNIT_AURA", Update)
+	else
 		self.Atonement:SetScript("OnUpdate", nil)
 		self.Atonement:SetValue(0)
 		self.Atonement:Hide()
 
 		self:UnregisterEvent("UNIT_AURA", Update)
-	else
-		self:RegisterEvent("UNIT_AURA", Update)
 	end
 end
 
 local function Enable(self)
-	local Bar = self.Atonement
+	local element = self.Atonement
+	if element then
+		element.color = element.color or ATONEMENT_COLOR
 
-	if Bar then
 		self:RegisterEvent("UNIT_AURA", Update)
-		self:RegisterEvent("PLAYER_TALENT_UPDATE", CheckSpec, true)
-		self:RegisterEvent("PLAYER_ENTERING_WORLD", CheckSpec, true)
+		self:RegisterEvent("PLAYER_TALENT_UPDATE", Visibility, true)
+		self:RegisterEvent("PLAYER_ENTERING_WORLD", Visibility, true)
 
-		Bar:SetMinMaxValues(0, 15)
-		Bar:SetValue(0)
-		Bar:SetStatusBarColor(207/255, 181/255, 59/255)
+		local color = element.color
+		element:SetValue(0)
+		element:SetStatusBarColor(color.r, color.g, color.b)
 
-		if not Bar.Backdrop then
-			Bar.Backdrop = self.Atonement:CreateTexture(nil, "BACKGROUND")
-			Bar.Backdrop:SetAllPoints()
-			Bar.Backdrop:SetColorTexture(207/255 * 0.2, 181/255 * 0.2, 59/255 * 0.2)
+		local bg = element.bg
+		if bg then
+			local mu = bg.multiplier or 1
+			bg:SetVertexColor(color.r * mu, color.g * mu, color.b * mu)
 		end
 
+		element:Hide()
+
 		return true
-	else
-		return false
 	end
 end
 
 local function Disable(self)
-	local Bar = self.Atonement
+	local element = self.Atonement
+	if element then
+		element:Hide()
 
-	if Bar then
 		self:UnregisterEvent("UNIT_AURA", Update)
-		self:UnregisterEvent("PLAYER_TALENT_UPDATE", CheckSpec)
-		self:UnregisterEvent("PLAYER_ENTERING_WORLD", CheckSpec)
+		self:UnregisterEvent("PLAYER_TALENT_UPDATE", Visibility)
+		self:UnregisterEvent("PLAYER_ENTERING_WORLD", Visibility)
 	end
 end
 
