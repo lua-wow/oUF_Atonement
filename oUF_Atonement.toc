@@ -1,11 +1,11 @@
-## Interface: 100100
-## Author: Tukz
+## Interface: 100207
+## Author: Luaerror, Tukz
 ## Version: 1.0.0
 ## Title: oUF Atonement
 ## Notes: Atonement tracker support for oUF layouts.
 ## RequiredDeps: oUF
 
-## X-Maintainer: Tukz
-## X-Website: http://www.tukui.org
+## X-Maintainer: Luaerror
+## X-Website: https://github.com/lua-wow/oUF_Atonement
 
 oUF_Atonement.lua

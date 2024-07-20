@@ -2,25 +2,42 @@
 
 Atonement tracker support for oUF layouts
 
-```lua
-local class = select(2, UnitClass("player"))
+## Element: `Atonement`
 
+Handles the update of a status bar that displays player's Atonement buff duration.
+
+### Widgets
+
+-   `Atonement`: A `StatusBar` used to represent player's 'Atonement' buff duration.
+
+### Sub-Widgets
+
+-   `.bg`:  A `Texture` used as a background. It will inherit the color of the main StatusBar.
+
+### Options
+
+-   `.color`: use to color the status bar. Default is #cfb53b (207, 181, 59)
+
+### Examples
+
+```lua
+local _, class = UnitClass("player")
 if (class ~= "PRIEST") then return end
 
--- create atonement oUF
-local Atonement = CreateFrame("StatusBar", self:GetName().."Atonement", self.Health)
-Atonement:SetPoint("BOTTOMLEFT", self.Health, "BOTTOMLEFT")
-Atonement:SetPoint("BOTTOMRIGHT", self.Health, "BOTTOMRIGHT")
-Atonement:SetHeight(6)
-Atonement:SetStatusBarTexture(HealthTexture)
-Atonement:SetFrameLevel(self.Health:GetFrameLevel() + 1)
+-- Position and size
+local Atonement = CreateFrame("StatusBar", nil, self)
+Atonement:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT")
+Atonement:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT")
+Atonement:SetHeight(5)
+Atonement:SetStatusBarTexture(Texture)
 
--- add a background
-Atonement.Background = Atonement:CreateTexture(nil, "BORDER")
-Atonement.Background:SetTexture(HealthTexture)
-Atonement.Background:SetAllPoints()
-Atonement.Background:SetColorTexture(207/255 * .2, 181/255 * .2, 59/255 * .2)
+-- Add a background
+local Background = Atonement:CreateTexture(nil, "BORDER")
+Background:SetAllPoints()
+Background:SetTexture(Texture)
+Background.multiplier = 0.30
 
--- register it with oUF
+-- Register it with oUF
+Atonement.bg = Background
 self.Atonement = Atonement
 ```
