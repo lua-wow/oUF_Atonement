@@ -65,19 +65,58 @@ local function OnUpdate(self, elapsed)
 	end
 end
 
+local GetUnitAura
+if C_UnitAuras then
+	GetUnitAura = function(unit, index, filter)
+		return C_UnitAuras.GetBuffDataByIndex(unit, index, filter)
+	end
+else
+	GetUnitAura = function(unit, index, filter)
+		local name, icon, count, dispelType, duration, expirationTime, source, isStealable, nameplateShowPersonal,
+		spellId, canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = UnitBuff(unit, index, filter)
+		if name then
+			return {
+				auraInstanceID = index,
+				name = name,
+				icon = icon,
+				spellId = spellId,
+				sourceUnit = source,
+				dispelName = dispelType,
+				applications = count,
+				canApplyAura = canApplyAura,
+				duration = duration,
+				expirationTime = expirationTime,
+				isStealable = isStealable,
+				isBossAura = isBossDebuff,
+				isFromPlayerOrPlayerPet = castByPlayer,
+				isHarmful = (filter == "HARMFUL"),
+				isHelpful = (filter == "HELPFUL"),
+				isRaid = (filter == "RAID"),
+				isNameplateOnly = false,
+				nameplateShowAll = nameplateShowAll,
+				nameplateShowPersonal = false,
+				charges = nil,
+				maxCharges = nil,
+				points = nil,
+				timeMod = timeMod
+			}
+		end
+	end
+end
+
 local function Update(self, event, unit)
 	if self.unit ~= unit then return end
 	local element = self.Atonement
 
 	if element then
 		for index = 1, MAX_AURAS do
-			local name, icon, count, dispelType, duration, expirationTime, source, isStealable, _, spellID = UnitBuff(unit, index)
-			if name then
-				if auras[spellID] then
-					element.duration = duration or 0
-					element.expirationTime = expirationTime or (GetTime() + element.duration)
+			local aura = GetUnitAura(unit, index, "HELPFUL")
+			if aura then
+				if auras[aura.spellId] then
+					element.duration = aura.duration or 0
+					element.expirationTime = aura.expirationTime or (GetTime() + element.duration)
 					
-					element:SetMinMaxValues(0, duration)
+					element:SetMinMaxValues(0, element.duration)
 					element:SetScript("OnUpdate", OnUpdate)
 					element:Show()
 
