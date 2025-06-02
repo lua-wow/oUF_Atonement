@@ -1,4 +1,4 @@
-## Interface: 40400, 100207, 110002
+## Interface: 40400, 100207, 110105
 ## Author: Luaerror, Tukz
 ## Version: 1.1.0
 ## Title: oUF Atonement
