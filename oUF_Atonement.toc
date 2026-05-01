@@ -1,4 +1,4 @@
-## Interface: 110200
+## Interface: 110200, 120005
 ## Author: Luaerror, Tukz
 ## Version: 1.1.0
 ## Title: oUF Atonement
