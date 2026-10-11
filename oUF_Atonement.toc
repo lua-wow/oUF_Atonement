@@ -1,6 +1,6 @@
 ## Interface: 70305, 80307, 90207, 100207, 110207, 120100
 ## Author: Luaerror, Tukz
-## Version: 1.2.0
+## Version: 1.3.0
 ## Title: oUF Atonement
 ## Notes: Atonement tracker support for oUF layouts.
 ## RequiredDeps: oUF
