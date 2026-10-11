@@ -82,12 +82,13 @@ local function UpdateAura(element, unit, data)
 end
 
 local function FilterAuras(unit, data)
-	return data and ATONEMENT_SPELLS[data.spellId]
+	-- aura data is secret while auras are restricted (Retail: combat, encounters)
+	return data and not issecretvalue(data.spellId) and ATONEMENT_SPELLS[data.spellId]
 end
 
 local function Update(self, event, unit, updateInfo)
-	if self.unit ~= unit then return end
-	
+	if (self.__unit or self.unit) ~= unit then return end
+
 	local element = self.Atonement
 	if not element then return end
 
@@ -119,9 +120,9 @@ local function Update(self, event, unit, updateInfo)
 			end
 		end
 
-		if updateInfo.updatedAuraInstancesIDs then
-			for _, auraInstanceID in next, updateInfo.updatedAuraInstancesIDs do
-				local data = C_UnitAuras.GetAuraDataByInstanceID(unit, auraInstanceID)
+		if updateInfo.updatedAuraInstanceIDs then
+			for _, auraInstanceID in next, updateInfo.updatedAuraInstanceIDs do
+				local data = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID)
 				if FilterAuras(unit, data) then
 					element.data = data
 					changed = true
@@ -130,8 +131,8 @@ local function Update(self, event, unit, updateInfo)
 			end
 		end
 
-		if updateInfo.removedAuraInstancesIDs then
-			for _, auraInstanceID in next, updateInfo.removedAuraInstancesIDs do
+		if updateInfo.removedAuraInstanceIDs then
+			for _, auraInstanceID in next, updateInfo.removedAuraInstanceIDs do
 				if (element.data and element.data.auraInstanceID == auraInstanceID) then
 					element.data = nil
 					changed = true
@@ -143,12 +144,6 @@ local function Update(self, event, unit, updateInfo)
 
 	if changed then
 		UpdateAura(element, unit, element.data)
-	elseif (element.data) then
-		local data = C_UnitAuras.GetPlayerAuraBySpellID(element.data.spellId)
-		if (not data or data.auraInstanceID ~= element.data.auraInstanceID) then
-			element.data = data
-			UpdateAura(element, unit, data)
-		end
 	end
 end
 
@@ -169,7 +164,7 @@ local function Visibility(self, event)
 end
 
 local function ForceUpdate(element)
-	Visibility(element.__owner, "ForceUpdate", element.__owner.unit)
+	Visibility(element.__owner, "ForceUpdate", element.__owner.__unit or element.__owner.unit)
 end
 
 local function Enable(self)
